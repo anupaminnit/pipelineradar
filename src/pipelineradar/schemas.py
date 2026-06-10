@@ -81,6 +81,58 @@ class Brief(BaseModel):
     created_at: datetime = Field(default_factory=_now_utc)
 
 
+# ── Phase 3: synthesis models ──────────────────────────────────────────────────
+
+
+class Claim(BaseModel):
+    text: str
+    source_item_ids: list[str]  # UUID strings of items supporting this claim
+    confidence: float  # LLM's own estimate, 0.0–1.0
+
+
+class BriefSection(BaseModel):
+    heading: str
+    claims: list[Claim]
+
+
+class BriefDraft(BaseModel):
+    """Raw LLM output before citation grounding."""
+
+    therapeutic_area: str
+    sections: list[BriefSection]
+    generated_at: datetime = Field(default_factory=_now_utc)
+    model_used: str
+
+
+class Citation(BaseModel):
+    item_id: str
+    label: str  # e.g. "ClinicalTrials NCT05123456"
+    url: str
+
+
+class GroundedClaim(BaseModel):
+    text: str
+    source_item_ids: list[str]
+    confidence: float
+    citations: list[Citation] = Field(default_factory=list)
+    unverified: bool = False  # True if any source_item_id was not in new_items
+
+
+class GroundedBriefSection(BaseModel):
+    heading: str
+    claims: list[GroundedClaim]
+
+
+class GroundedBrief(BaseModel):
+    """BriefDraft after hallucination check and URL attachment."""
+
+    therapeutic_area: str
+    sections: list[GroundedBriefSection]
+    generated_at: datetime
+    model_used: str
+    run_id: str
+
+
 class RunState(BaseModel):
     """Top-level state threaded through the LangGraph pipeline."""
 
@@ -89,5 +141,8 @@ class RunState(BaseModel):
     resolved_items: list[Item] = Field(default_factory=list)
     new_items: list[Item] = Field(default_factory=list)
     entities: list[Entity] = Field(default_factory=list)
+    draft_briefs: list[BriefDraft] = Field(default_factory=list)
+    grounded_briefs: list[GroundedBrief] = Field(default_factory=list)
     briefs: list[Brief] = Field(default_factory=list)
+    markdown_output: str = ""
     errors: list[str] = Field(default_factory=list)

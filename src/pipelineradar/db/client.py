@@ -12,7 +12,7 @@ from uuid import UUID
 
 from supabase import Client, create_client
 
-from pipelineradar.schemas import Entity, EntityKind, Item, Run, RunStatus
+from pipelineradar.schemas import Brief, Entity, EntityKind, Item, Run, RunStatus
 
 if TYPE_CHECKING:
     from pipelineradar.config import Settings
@@ -158,6 +158,13 @@ class SupabaseClient:
             .execute()
         )
         return cast(list[dict[str, Any]], response.data or [])
+
+
+    # ── briefs ────────────────────────────────────────────────────────────────
+
+    def upsert_brief(self, brief: Brief) -> None:
+        """Insert a rendered brief row; no conflict key — briefs are append-only."""
+        self._client.table("briefs").insert(brief.model_dump(mode="json")).execute()
 
 
 def _item_to_row(item: Item) -> dict[str, Any]:
