@@ -1,0 +1,16 @@
+# PipelineRadar watchlist — Phase 0/1 seed (oncology)
+# Keep small during development to avoid burning API limits.
+
+therapeutic_areas:
+  - oncology
+
+drugs:
+  - pembrolizumab
+  - nivolumab
+
+companies:
+  - "Merck Sharp & Dohme"
+  - "Bristol Myers Squibb"
+
+targets:
+  - PD-1
