@@ -78,3 +78,13 @@ create table briefs (
 
 create index briefs_run_id on briefs (run_id);
 create index briefs_created_at on briefs (created_at);
+
+-- ── RLS ───────────────────────────────────────────────────────────────────────
+-- PipelineRadar is a backend-only system: all access goes through the service
+-- role key. RLS is disabled on all tables; re-enable and add policies only if
+-- you expose these tables to the Supabase client-side SDK in the future.
+
+alter table entities disable row level security;
+alter table runs     disable row level security;
+alter table items    disable row level security;
+alter table briefs   disable row level security;

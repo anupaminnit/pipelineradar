@@ -1,14 +1,23 @@
-"""LangGraph state definition.
+"""LangGraph state definition for the PipelineRadar pipeline.
 
-RunState (from schemas.py) is the single state object threaded through all
-graph nodes. This module re-exports it as the canonical graph state type and
-will add any LangGraph-specific TypedDict wrappers needed by the framework.
-
-Phase 3: wire RunState into the LangGraph StateGraph.
+PipelineState is the TypedDict used by the StateGraph. RunState is the
+equivalent Pydantic model used outside the graph (cross-module boundaries).
 """
 
 from __future__ import annotations
 
-from pipelineradar.schemas import RunState
+from typing import TypedDict
 
-__all__ = ["RunState"]
+from pipelineradar.schemas import Brief, Entity, Item, Run, RunState  # noqa: F401
+
+__all__ = ["PipelineState", "RunState"]
+
+
+class PipelineState(TypedDict):
+    run: Run
+    items: list[Item]
+    resolved_items: list[Item]
+    new_items: list[Item]
+    entities: list[Entity]
+    briefs: list[Brief]
+    errors: list[str]

@@ -7,12 +7,17 @@ Brief     — a synthesized intelligence brief for one therapeutic area
 RunState  — top-level LangGraph state passed between nodes
 """
 
-from datetime import datetime
+import uuid as _uuid
+from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field
+
+
+def _now_utc() -> datetime:
+    return datetime.now(tz=UTC)
 
 
 class EntityKind(StrEnum):
@@ -23,12 +28,12 @@ class EntityKind(StrEnum):
 
 
 class Entity(BaseModel):
-    id: UUID
+    id: UUID = Field(default_factory=_uuid.uuid4)
     kind: EntityKind
     canonical_name: str
     aliases: list[str] = Field(default_factory=list)
     external_ids: dict[str, str] = Field(default_factory=dict)
-    created_at: datetime
+    created_at: datetime = Field(default_factory=_now_utc)
 
 
 class ItemType(StrEnum):
@@ -38,7 +43,7 @@ class ItemType(StrEnum):
 
 
 class Item(BaseModel):
-    id: UUID
+    id: UUID = Field(default_factory=_uuid.uuid4)
     source: str
     source_id: str
     item_type: ItemType
@@ -48,7 +53,7 @@ class Item(BaseModel):
     entity_ids: list[UUID] = Field(default_factory=list)
     raw: dict[str, Any] = Field(default_factory=dict)
     published_at: datetime | None = None
-    ingested_at: datetime
+    ingested_at: datetime = Field(default_factory=_now_utc)
     content_hash: str
 
 
@@ -59,8 +64,8 @@ class RunStatus(StrEnum):
 
 
 class Run(BaseModel):
-    id: UUID
-    started_at: datetime
+    id: UUID = Field(default_factory=_uuid.uuid4)
+    started_at: datetime = Field(default_factory=_now_utc)
     finished_at: datetime | None = None
     status: RunStatus = RunStatus.running
     items_seen: int = 0
@@ -68,12 +73,12 @@ class Run(BaseModel):
 
 
 class Brief(BaseModel):
-    id: UUID
+    id: UUID = Field(default_factory=_uuid.uuid4)
     run_id: UUID
     therapeutic_area: str
     body_md: str
     citations: list[dict[str, str]] = Field(default_factory=list)
-    created_at: datetime
+    created_at: datetime = Field(default_factory=_now_utc)
 
 
 class RunState(BaseModel):
@@ -81,6 +86,7 @@ class RunState(BaseModel):
 
     run: Run
     items: list[Item] = Field(default_factory=list)
+    resolved_items: list[Item] = Field(default_factory=list)
     new_items: list[Item] = Field(default_factory=list)
     entities: list[Entity] = Field(default_factory=list)
     briefs: list[Brief] = Field(default_factory=list)

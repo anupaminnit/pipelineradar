@@ -16,6 +16,7 @@ dependencies = [
     "fastapi>=0.115.0",
     "httpx>=0.27.0",
     "langgraph>=0.2.0",
+    "tenacity>=9.0.0",
     "pydantic>=2.0.0",
     "pydantic-settings>=2.0.0",
     "python-dotenv>=1.0.0",
@@ -23,6 +24,7 @@ dependencies = [
     "structlog>=24.0.0",
     "supabase>=2.0.0",
     "uvicorn[standard]>=0.30.0",
+    "curl-cffi>=0.15.0",
 ]
 
 [project.optional-dependencies]
@@ -52,6 +54,7 @@ plugins = ["pydantic.mypy"]
 [[tool.mypy.overrides]]
 module = [
     "apscheduler.*",
+    "curl_cffi.*",
     "supabase.*",
     "gotrue.*",
     "postgrest.*",
