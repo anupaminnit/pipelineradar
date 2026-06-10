@@ -27,6 +27,7 @@ from langgraph.graph import END, StateGraph
 from pipelineradar.config import WatchlistConfig
 from pipelineradar.db.client import SupabaseClient
 from pipelineradar.graph.nodes import (
+    deliver_email,
     ground_citations,
     log_nothing_new,
     make_detect_changes,
@@ -61,6 +62,7 @@ def build_graph(
     workflow.add_node("synthesize_brief", make_synthesize_brief(llm, watchlist))
     workflow.add_node("ground_citations", ground_citations)
     workflow.add_node("render_markdown", render_markdown)
+    workflow.add_node("deliver_email", deliver_email)
     workflow.add_node("persist_brief", make_persist_brief(db))
     workflow.add_node("log_run_complete", make_log_run_complete(db))
 
@@ -75,7 +77,8 @@ def build_graph(
     workflow.add_edge("log_nothing_new", END)
     workflow.add_edge("synthesize_brief", "ground_citations")
     workflow.add_edge("ground_citations", "render_markdown")
-    workflow.add_edge("render_markdown", "persist_brief")
+    workflow.add_edge("render_markdown", "deliver_email")
+    workflow.add_edge("deliver_email", "persist_brief")
     workflow.add_edge("persist_brief", "log_run_complete")
     workflow.add_edge("log_run_complete", END)
 

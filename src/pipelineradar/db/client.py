@@ -160,11 +160,63 @@ class SupabaseClient:
         return cast(list[dict[str, Any]], response.data or [])
 
 
+    # ── runs (API queries) ────────────────────────────────────────────────────
+
+    def get_run(self, run_id: UUID) -> Run | None:
+        """Fetch a single run by ID, or None if not found."""
+        response = (
+            self._client.table("runs")
+            .select("*")
+            .eq("id", str(run_id))
+            .limit(1)
+            .execute()
+        )
+        rows = response.data or []
+        if not rows:
+            return None
+        return Run.model_validate(rows[0])
+
     # ── briefs ────────────────────────────────────────────────────────────────
 
     def upsert_brief(self, brief: Brief) -> None:
         """Insert a rendered brief row; no conflict key — briefs are append-only."""
         self._client.table("briefs").insert(brief.model_dump(mode="json")).execute()
+
+    def get_briefs(self, limit: int = 10) -> list[Brief]:
+        """Return the most recent briefs (lightweight — includes all fields)."""
+        response = (
+            self._client.table("briefs")
+            .select("*")
+            .order("created_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        return [Brief.model_validate(row) for row in (response.data or [])]
+
+    def get_brief(self, brief_id: UUID) -> Brief | None:
+        """Return a single brief by ID, or None if not found."""
+        response = (
+            self._client.table("briefs")
+            .select("*")
+            .eq("id", str(brief_id))
+            .limit(1)
+            .execute()
+        )
+        rows = response.data or []
+        if not rows:
+            return None
+        return Brief.model_validate(rows[0])
+
+    def run_has_brief(self, run_id: UUID) -> bool:
+        """Return True if at least one brief was generated for this run."""
+        response = (
+            self._client.table("briefs")
+            .select("id")
+            .eq("run_id", str(run_id))
+            .limit(1)
+            .execute()
+        )
+        return bool(response.data)
 
 
 def _item_to_row(item: Item) -> dict[str, Any]:

@@ -36,3 +36,5 @@ class PipelineState(TypedDict):
     errors: list[str]
     # test/demo flag — bypasses hash check in detect_changes
     ignore_seen: bool
+    # force flag — bypasses change detection entirely without touching DB
+    force: bool

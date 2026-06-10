@@ -32,3 +32,7 @@ htmlcov/
 
 # Ruff
 .ruff_cache/
+
+# PipelineRadar generated output
+output/*.md
+output/*.html

@@ -5,6 +5,11 @@ Usage:
   python -m pipelineradar.main --once            # single full pipeline run
   python -m pipelineradar.main --once --ignore-seen  # treat all items as new
                                                      # (demo / acceptance testing)
+  python -m pipelineradar.main --force           # force-mode single run; skips
+                                                 # change detection, does NOT
+                                                 # update DB state
+                                                 # Demo/debug only.
+  python -m pipelineradar.main                   # production: start scheduler
 """
 
 from __future__ import annotations
@@ -77,8 +82,14 @@ def dry_run() -> None:
 # ── once ──────────────────────────────────────────────────────────────────────
 
 
-async def once(ignore_seen: bool = False) -> None:
-    log.info("run.start", ignore_seen=ignore_seen)
+async def once(ignore_seen: bool = False, force: bool = False) -> None:
+    if force:
+        log.info(
+            "run.start",
+            mode="FORCE MODE — change detection bypassed, re-synthesizing all items.",
+        )
+    else:
+        log.info("run.start", ignore_seen=ignore_seen)
 
     try:
         settings = get_settings()
@@ -103,6 +114,7 @@ async def once(ignore_seen: bool = False) -> None:
         "markdown_output": "",
         "errors": [],
         "ignore_seen": ignore_seen,
+        "force": force,
     }
 
     try:
@@ -113,7 +125,6 @@ async def once(ignore_seen: bool = False) -> None:
         log.error("run.failed", error=str(exc))
         sys.exit(1)
 
-    # Print the brief to terminal if one was generated
     md = final_state.get("markdown_output", "")
     if md:
         print("\n" + "=" * 72)
@@ -122,6 +133,39 @@ async def once(ignore_seen: bool = False) -> None:
         print(f"Brief also written to output/brief_{run.id}.md")
     else:
         print("\nNo new items — synthesis skipped.")
+
+
+# ── scheduler ─────────────────────────────────────────────────────────────────
+
+
+async def run_scheduler() -> None:
+    from pipelineradar.scheduler import PipelineScheduler
+
+    try:
+        settings = get_settings()
+    except ValidationError as exc:
+        log.error("scheduler.config_invalid", errors=exc.errors())
+        sys.exit(1)
+
+    scheduler = PipelineScheduler(settings)
+    scheduler.start()
+
+    stop_event = asyncio.Event()
+
+    def _signal_handler() -> None:
+        stop_event.set()
+
+    loop = asyncio.get_running_loop()
+    import signal as _signal
+
+    loop.add_signal_handler(_signal.SIGINT, _signal_handler)
+    loop.add_signal_handler(_signal.SIGTERM, _signal_handler)
+
+    try:
+        await stop_event.wait()
+    finally:
+        scheduler.shutdown()
+        log.info("scheduler.shutdown_complete")
 
 
 # ── entrypoint ────────────────────────────────────────────────────────────────
@@ -139,15 +183,25 @@ def main() -> None:
         action="store_true",
         help="Treat all items as new (bypass hash check — for testing/demo only)",
     )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help=(
+            "Re-synthesize all items without updating change-detection state. "
+            "Demo/debug only. Does not update change-detection state."
+        ),
+    )
     args = parser.parse_args()
 
     if args.dry_run:
         dry_run()
+    elif args.force:
+        asyncio.run(once(force=True))
     elif args.once:
         asyncio.run(once(ignore_seen=args.ignore_seen))
     else:
-        parser.print_help()
-        sys.exit(1)
+        # Production: start the autonomous scheduler
+        asyncio.run(run_scheduler())
 
 
 if __name__ == "__main__":

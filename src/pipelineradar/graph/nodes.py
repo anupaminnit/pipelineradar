@@ -14,6 +14,7 @@ import structlog
 
 from pipelineradar.config import WatchlistConfig
 from pipelineradar.db.client import SupabaseClient
+from pipelineradar.deliver.email import send_brief
 from pipelineradar.deliver.markdown import brief_to_db_model, render_brief
 from pipelineradar.detect.change_detector import ChangeDetector
 from pipelineradar.graph.state import PipelineState
@@ -143,6 +144,18 @@ def make_detect_changes(db: SupabaseClient) -> Any:
     async def detect_changes(state: PipelineState) -> dict[str, Any]:
         resolved: list[Item] = state["resolved_items"]
 
+        if state.get("force"):
+            # Force mode: skip DB entirely — no read, no write. A subsequent
+            # normal run will still see the original hashes in the DB.
+            log.info(
+                "node.detect_changes",
+                run_id=str(state["run"].id),
+                items_seen=len(resolved),
+                items_new=len(resolved),
+                mode="force",
+            )
+            return {"new_items": resolved}
+
         if state.get("ignore_seen"):
             # Demo/test mode: treat everything as new without DB lookup.
             # upsert so entity_ids are persisted.
@@ -240,6 +253,15 @@ def render_markdown(state: PipelineState) -> dict[str, Any]:
     combined = "\n\n---\n\n".join(parts)
     log.info("node.render_markdown", run_id=run_id, chars=len(combined))
     return {"markdown_output": combined}
+
+
+async def deliver_email(state: PipelineState) -> dict[str, Any]:
+    """Send each grounded brief by email (or write to output/ as fallback)."""
+    run_id = str(state["run"].id)
+    parts = state["markdown_output"].split("\n\n---\n\n")
+    for grounded, md in zip(state["grounded_briefs"], parts, strict=False):
+        await send_brief(grounded, md, run_id)
+    return {}
 
 
 def make_persist_brief(db: SupabaseClient) -> Any:

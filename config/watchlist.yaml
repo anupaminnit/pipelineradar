@@ -14,3 +14,7 @@ companies:
 
 targets:
   - PD-1
+
+schedule:
+  cron: "0 7 * * *"      # every day at 07:00 local time
+  timezone: "Asia/Kolkata"

@@ -13,11 +13,17 @@ from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+class ScheduleConfig(BaseModel):
+    cron: str = "0 7 * * *"
+    timezone: str = "UTC"
+
+
 class WatchlistConfig(BaseModel):
     therapeutic_areas: list[str] = Field(default_factory=list)
     drugs: list[str] = Field(default_factory=list)
     companies: list[str] = Field(default_factory=list)
     targets: list[str] = Field(default_factory=list)
+    schedule: ScheduleConfig = Field(default_factory=ScheduleConfig)
 
 
 class Settings(BaseSettings):
@@ -42,6 +48,7 @@ class Settings(BaseSettings):
     smtp_password: str | None = None
     email_from: str | None = None
     email_to: str | None = None
+    alert_to_email: str | None = None  # recipient for ALERT_TO_EMAIL env var
 
     # App
     watchlist_path: Path = Path("config/watchlist.yaml")
